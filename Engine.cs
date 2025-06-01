@@ -25,6 +25,7 @@ public class Engine
     private bool _isPaused = false;
 
 
+
     private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
 
     public Engine(GameRenderer renderer, Input input)
