@@ -4,7 +4,9 @@ namespace TheAdventure.Models;
 
 public class PlayerObject : RenderableGameObject
 {
-    private const int _speed = 128; // pixels per second
+    private const int _speed = 128;
+    public int CoinsCollected { get; set; } = 0;
+
 
     public enum PlayerStateDirection
     {

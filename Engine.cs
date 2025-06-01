@@ -16,9 +16,12 @@ public class Engine
     private readonly Dictionary<int, GameObject> _gameObjects = new();
     private readonly Dictionary<string, TileSet> _loadedTileSets = new();
     private readonly Dictionary<int, Tile> _tileIdMap = new();
+    private readonly Dictionary<int, CoinObject> _coins = new();
 
     private Level _currentLevel = new();
     private PlayerObject? _player;
+    private int _money = 0;
+
 
     private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
 
@@ -74,6 +77,17 @@ public class Engine
 
         _currentLevel = level;
 
+        Random random = new Random();
+        for (int i = 0; i < 20; i++)
+        {
+            int x = random.Next(100, _currentLevel.Width!.Value * _currentLevel.TileWidth!.Value - 100);
+            int y = random.Next(100, _currentLevel.Height!.Value * _currentLevel.TileHeight!.Value - 100);
+
+            SpriteSheet coinSpriteSheet = SpriteSheet.Load(_renderer, "Coin.json", "Assets");
+            CoinObject coin = new CoinObject(coinSpriteSheet, (x, y));
+            _coins.Add(coin.Id, coin);
+        }
+
         _scriptEngine.LoadAll(Path.Combine("Assets", "Scripts"));
     }
 
@@ -120,6 +134,8 @@ public class Engine
         RenderTerrain();
         RenderAllObjects();
 
+
+
         _renderer.PresentFrame();
     }
 
@@ -133,6 +149,11 @@ public class Engine
             {
                 toRemove.Add(tempGameObject.Id);
             }
+        }
+
+        foreach (var coin in _coins.Values)
+        {
+            coin.Render(_renderer);
         }
 
         foreach (var id in toRemove)
@@ -152,6 +173,27 @@ public class Engine
                 _player.GameOver();
             }
         }
+        var coinsToRemove = new List<int>();
+        foreach (var coin in _coins.Values)
+        {
+            var deltaX = Math.Abs(_player.Position.X - coin.Position.X);
+            var deltaY = Math.Abs(_player.Position.Y - coin.Position.Y);
+            if (deltaX < 32 && deltaY < 32)
+            {
+                coinsToRemove.Add(coin.Id);
+                _player.CoinsCollected++;
+                _money += 5;
+                Console.WriteLine($"?? Money earned: {_money} (Coins: {_player.CoinsCollected})");
+            }
+        }
+
+
+        foreach (var coinId in coinsToRemove)
+        {
+            _coins.Remove(coinId);
+        }
+
+        _renderer.DrawText($"Money: {_money}", 30, 30, new SixLabors.ImageSharp.PixelFormats.Rgba32(255, 255, 0, 255));
 
         _player?.Render(_renderer);
     }

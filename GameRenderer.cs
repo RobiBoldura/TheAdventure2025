@@ -1,7 +1,10 @@
 using Silk.NET.Maths;
 using Silk.NET.SDL;
+using SixLabors.Fonts;
 using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Drawing.Processing;
 using SixLabors.ImageSharp.PixelFormats;
+using SixLabors.ImageSharp.Processing;
 using TheAdventure.Models;
 using Point = Silk.NET.SDL.Point;
 
@@ -21,10 +24,10 @@ public unsafe class GameRenderer
     public GameRenderer(Sdl sdl, GameWindow window)
     {
         _sdl = sdl;
-        
+
         _renderer = (Renderer*)window.CreateRenderer();
         _sdl.SetRenderDrawBlendMode(_renderer, BlendMode.Blend);
-        
+
         _window = window;
         var windowSize = window.Size;
         _camera = new Camera(windowSize.Width, windowSize.Height);
@@ -60,16 +63,16 @@ public unsafe class GameRenderer
                 {
                     throw new Exception("Failed to create surface from image data.");
                 }
-                
+
                 var imageTexture = _sdl.CreateTextureFromSurface(_renderer, imageSurface);
                 if (imageTexture == null)
                 {
                     _sdl.FreeSurface(imageSurface);
                     throw new Exception("Failed to create texture from surface.");
                 }
-                
+
                 _sdl.FreeSurface(imageSurface);
-                
+
                 _textureData[_textureId] = textureInfo;
                 _texturePointers[_textureId] = (IntPtr)imageTexture;
             }
@@ -109,5 +112,46 @@ public unsafe class GameRenderer
     public void PresentFrame()
     {
         _sdl.RenderPresent(_renderer);
+    }
+
+    public void DrawText(string text, int x, int y, Rgba32 color)
+    {
+        
+        var fontCollection = new FontCollection();
+        var family = fontCollection.Add("Assets/Fonts/OpenSans-Regular.ttf");
+        var font = family.CreateFont(28);
+
+       
+        var textBounds = TextMeasurer.MeasureBounds(text, new TextOptions(font));
+        int padding = 4;
+        int width = (int)Math.Ceiling(textBounds.Width) + 2;
+        int height = (int)Math.Ceiling(textBounds.Height) + padding;
+
+        
+        using var image = new Image<Rgba32>(width, height);
+        image.Mutate(ctx =>
+        {
+            ctx.DrawText(text, font, color, new SixLabors.ImageSharp.PointF(0, 0));
+        });
+
+        
+        var imageData = new byte[width * height * 4];
+        image.CopyPixelDataTo(imageData);
+
+        fixed (byte* dataPtr = imageData)
+        {
+            var surface = _sdl.CreateRGBSurfaceWithFormatFrom(
+                dataPtr, width, height, 8, width * 4, (uint)PixelFormatEnum.Rgba32);
+            if (surface == null) return;
+
+            var texture = _sdl.CreateTextureFromSurface(_renderer, surface);
+            _sdl.FreeSurface(surface);
+            if (texture == null) return;
+
+            
+            var dstRect = new Rectangle<int>(x, y, width, height);
+            _sdl.RenderCopy(_renderer, (Texture*)texture, null, in dstRect);
+            _sdl.DestroyTexture(texture);
+        }
     }
 }
