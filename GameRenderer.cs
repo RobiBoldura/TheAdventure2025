@@ -154,4 +154,13 @@ public unsafe class GameRenderer
             _sdl.DestroyTexture(texture);
         }
     }
+    public Vector2D<int> GetWindowSize()
+    {
+        int w = 0, h = 0;
+        unsafe
+        {
+            _sdl.GetRendererOutputSize(_renderer, &w, &h);
+        }
+        return new Vector2D<int>(w, h);
+    }
 }

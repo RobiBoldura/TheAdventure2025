@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Silk.NET.Maths;
+using SixLabors.ImageSharp.PixelFormats;
 using TheAdventure.Models;
 using TheAdventure.Models.Data;
 using TheAdventure.Scripting;
@@ -21,6 +22,7 @@ public class Engine
     private Level _currentLevel = new();
     private PlayerObject? _player;
     private int _money = 0;
+    private bool _isPaused = false;
 
 
     private DateTimeOffset _lastUpdate = DateTimeOffset.Now;
@@ -93,6 +95,7 @@ public class Engine
 
     public void ProcessFrame()
     {
+        
         var currentTime = DateTimeOffset.Now;
         var msSinceLastFrame = (currentTime - _lastUpdate).TotalMilliseconds;
         _lastUpdate = currentTime;
@@ -101,7 +104,16 @@ public class Engine
         {
             return;
         }
+        if (_input.IsKeyPPressed())
+        {
+            _isPaused = !_isPaused;
+            Console.WriteLine(_isPaused ? "Game paused!" : "Game resumed!");
+        }
 
+        if (_isPaused)
+        {
+            return; 
+        }
         double up = _input.IsUpPressed() ? 1.0 : 0.0;
         double down = _input.IsDownPressed() ? 1.0 : 0.0;
         double left = _input.IsLeftPressed() ? 1.0 : 0.0;
@@ -114,12 +126,18 @@ public class Engine
         {
             _player.Attack();
         }
-        
+       
+
         _scriptEngine.ExecuteAll(this);
 
         if (addBomb)
         {
             AddBomb(_player.Position.X, _player.Position.Y, false);
+        }
+        if (_input.IsKeyRPressed())
+        {
+            RestartGame();
+            return;
         }
     }
 
@@ -127,6 +145,10 @@ public class Engine
     {
         _renderer.SetDrawColor(0, 0, 0, 255);
         _renderer.ClearScreen();
+        var windowSize = _renderer.GetWindowSize();
+        int centerX = windowSize.X / 2;
+        int centerY = windowSize.Y / 2;
+        _renderer.DrawText("PAUSED", centerX - 50, centerY - 20, new Rgba32(255, 0, 0, 255));
 
         var playerPosition = _player!.Position;
         _renderer.CameraLookAt(playerPosition.X, playerPosition.Y);
@@ -134,10 +156,31 @@ public class Engine
         RenderTerrain();
         RenderAllObjects();
 
-
+        if (_isPaused)
+        {
+            _renderer.DrawText("PAUSED", 400, 300, new Rgba32(255, 0, 0, 255));
+        }
 
         _renderer.PresentFrame();
     }
+
+    public void RestartGame()
+    {
+        Console.WriteLine("Restarting game...");
+
+        _money = 0;
+        _coins.Clear();
+        _gameObjects.Clear();
+        _loadedTileSets.Clear();
+        _tileIdMap.Clear();
+
+        _isPaused = false;
+
+        
+        SetupWorld();
+    }
+
+
 
     public void RenderAllObjects()
     {

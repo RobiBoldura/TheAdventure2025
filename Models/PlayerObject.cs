@@ -37,7 +37,10 @@ public class PlayerObject : RenderableGameObject
     {
         SetState(state, State.Direction);
     }
-
+    public void ResetPosition()
+    {
+        Position = (100, 100); 
+    }
     public void SetState(PlayerState state, PlayerStateDirection direction)
     {
         if (State.State == PlayerState.GameOver)
